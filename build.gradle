@@ -1,12 +1,17 @@
 plugins {
     id("java")
+    id("application")
 }
 
 group = "de.a1btraum"
-version = "1.0-SNAPSHOT"
+version = "1.0"
 
 repositories {
     mavenCentral()
+}
+
+application {
+    mainClass.set("de.a1btraum.core.SudokuSolver")
 }
 
 dependencies {
