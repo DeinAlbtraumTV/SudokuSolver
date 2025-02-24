@@ -7,7 +7,6 @@ import de.a1btraum.solver.rules.IRule;
 import de.a1btraum.util.Pair;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Stack;
 import java.util.stream.IntStream;
