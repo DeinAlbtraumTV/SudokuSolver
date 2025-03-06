@@ -12,7 +12,7 @@ public class LineRule implements IRule {
 	@Override
 	public boolean loadData(JsonObject object) {
 		if (object.has("Freeform")) {
-			System.out.println("Not loading Box Rule: Freeform present");
+			System.out.println("Not loading Line Rule: Freeform present");
 			return false;
 		}
 		return true;
