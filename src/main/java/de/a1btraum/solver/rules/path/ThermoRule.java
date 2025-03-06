@@ -1,26 +1,32 @@
-package de.a1btraum.solver.rules;
+package de.a1btraum.solver.rules.path;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import de.a1btraum.core.SudokuState;
+import de.a1btraum.solver.rules.IRule;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class WhisperRule implements IRule {
-	WhisperPath[] paths;
+/**
+ * Thermo Rule: <br>
+ * Input: Path, can go diagonal <br>
+ * Ensures all numbers on this path are in ascending order
+ */
+public class ThermoRule implements IRule {
+	ThermoPath[] paths;
 
 	@Override
 	public boolean loadData(JsonObject object) {
-		JsonArray pathData = object.getAsJsonArray("Whisper");
+		JsonArray pathData = object.getAsJsonArray("Thermo");
 
 		if (pathData == null) return false;
 		if (pathData.isEmpty()) return false;
 
-		paths = new WhisperPath[pathData.size()];
+		paths = new ThermoPath[pathData.size()];
 		for (int i = 0; i < pathData.size(); i++) {
-			paths[i] = new WhisperPath(pathData.get(i).getAsJsonArray());
+			paths[i] = new ThermoPath(pathData.get(i).getAsJsonArray());
 		}
 
 		return true;
@@ -31,7 +37,7 @@ public class WhisperRule implements IRule {
 		Set<Integer> toRemove = new HashSet<>();
 
 		for (Integer val : current) {
-			for (WhisperPath path : paths) {
+			for (ThermoPath path : paths) {
 				// Check all values for each path
 				// If a path doesn't allow the value -> discard it
 				if (!path.isAllowed(state, row, col, val)) {
@@ -43,19 +49,19 @@ public class WhisperRule implements IRule {
 		current.removeAll(toRemove);
 	}
 
-	private static class WhisperPath extends AbstractPath {
-		private WhisperPath(JsonArray data) {
+	private static class ThermoPath extends AbstractPath {
+		private ThermoPath(JsonArray data) {
 			super(data);
 		}
 
 		@Override
 		boolean prevLocationFits(int prev, int cur) {
-			return prev == 0 || Math.abs(prev - cur) >= 5;
+			return prev == 0 || prev < cur;
 		}
 
 		@Override
 		boolean nextLocationFits(int next, int cur) {
-			return next == 0 || Math.abs(next - cur) >= 5;
+			return next == 0 || cur < next;
 		}
 	}
 }

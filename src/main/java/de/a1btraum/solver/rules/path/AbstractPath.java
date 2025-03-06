@@ -1,4 +1,4 @@
-package de.a1btraum.solver.rules;
+package de.a1btraum.solver.rules.path;
 
 import com.google.gson.JsonArray;
 import de.a1btraum.core.SudokuState;

@@ -3,9 +3,8 @@ package de.a1btraum.core;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import de.a1btraum.solver.WaveFunctionCollapseSolver;
-import de.a1btraum.solver.rules.BoxRule;
-import de.a1btraum.solver.rules.LineRule;
-import de.a1btraum.solver.rules.ThermoRule;
+import de.a1btraum.solver.rules.basic.BoxRule;
+import de.a1btraum.solver.rules.basic.LineRule;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -18,10 +17,10 @@ public class SudokuSolver {
 		JsonObject json = JsonParser.parseReader(new FileReader("sudoku.json")).getAsJsonObject();
 
 		// Build Solver
+		// Most basic sudoku without extra rules, adjust as you see fit
 		WaveFunctionCollapseSolver solver = new SolverBuilder(json)
 				.registerRule(new LineRule())
 				.registerRule(new BoxRule())
-				.registerRule(new ThermoRule())
 				.build();
 
 		// Solve the sudoku

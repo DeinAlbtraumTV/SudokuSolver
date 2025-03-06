@@ -13,7 +13,7 @@ public interface IRule {
 	/**
 	 * Loads the rule data from JSON
 	 * @param object Sudoku JSON data
-	 * @return If the rule is enabled (data for this rule was present)
+	 * @return If the rule is enabled (data for this rule was present and there are no rules that prevent this one from loading)
 	 */
 	boolean loadData(JsonObject object);
 
