@@ -113,19 +113,31 @@ public class SudokuState {
 		StringBuilder builder = new StringBuilder();
 
 		for (int i = 0; i < grid.length; i++) {
-			if (i % boxHeight == 0) builder.append("|---------------|---------------|---------------|\n");
+			if (i % boxHeight == 0) appendVerticalBorder(builder);
 			for (int j = 0; j < grid[i].length; j++) {
-				if (j % boxWidth == 0) builder.append("|\t");
+				if (j % boxWidth == 0) builder.append("|   ");
 
-				builder.append(grid[i][j]).append("\t");
+				builder.append(grid[i][j]).append("   ");
 
-				if (j == grid[i].length - 1) builder.append("|\t");
+				if (j == grid[i].length - 1) builder.append("|   ");
 			}
 
 			builder.append("\n");
-			if (i == grid.length - 1) builder.append("|---------------|---------------|---------------|\n");
+			if (i == grid.length - 1) appendVerticalBorder(builder);
 		}
 
 		return builder.toString();
+	}
+
+	private void appendVerticalBorder(StringBuilder builder) {
+		int maxLength = (int) Math.ceil((boxWidth * boxHeight) / 10f);
+
+		for (int i = 0; i < boxWidth; i++) {
+			builder.append("|---")
+				.append("-".repeat(maxLength * boxWidth))
+				.append("---".repeat(boxWidth));
+		}
+
+		builder.append("|\n");
 	}
 }
