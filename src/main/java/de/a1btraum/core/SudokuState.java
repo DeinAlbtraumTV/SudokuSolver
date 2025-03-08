@@ -39,6 +39,9 @@ public class SudokuState {
 		}
 	}
 
+	/**
+	 * Internal constructor for cloning
+	 */
 	private SudokuState(int boxWidth, int boxHeight, int[][] grid) {
 		this.boxWidth = boxWidth;
 		this.boxHeight = boxHeight;
@@ -108,6 +111,8 @@ public class SudokuState {
 		);
 	}
 
+	// FIXME: Currently has no way to properly print freeform grids as the state doesn't know about freeform rules
+	//  this is not really possible to fix right now though so probably won't ever be implemented
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
@@ -117,7 +122,8 @@ public class SudokuState {
 			for (int j = 0; j < grid[i].length; j++) {
 				if (j % boxWidth == 0) builder.append("|   ");
 
-				builder.append(grid[i][j]).append("   ");
+				int val = grid[i][j];
+				builder.append((val < 0 ? "-" : val)).append("   ");
 
 				if (j == grid[i].length - 1) builder.append("|   ");
 			}
