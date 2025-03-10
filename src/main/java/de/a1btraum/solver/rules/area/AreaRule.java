@@ -3,13 +3,13 @@ package de.a1btraum.solver.rules.area;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import de.a1btraum.core.SudokuState;
-import de.a1btraum.solver.rules.IRule;
+import de.a1btraum.solver.rules.IValidatableRule;
 import de.a1btraum.util.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class AreaRule implements IRule {
+public abstract class AreaRule implements IValidatableRule {
 	private final String memberName;
 
 	Area[] areas;

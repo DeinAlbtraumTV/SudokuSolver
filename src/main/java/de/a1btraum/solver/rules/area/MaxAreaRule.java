@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Set;
 
 public class MaxAreaRule extends AreaRule {
-	private final int AREA_MAX;
+	private final int AREA_TARGET;
 
-	public MaxAreaRule(int areaMax, String memberName) {
+	public MaxAreaRule(int areaTarget, String memberName) {
 		super(memberName);
-		AREA_MAX = areaMax;
+		AREA_TARGET = areaTarget;
 	}
 
 	@Override
@@ -31,12 +31,28 @@ public class MaxAreaRule extends AreaRule {
 			}
 
 			for (Integer i : current) {
-				if (AREA_MAX - sum < i) {
+				if (AREA_TARGET - sum < i) {
 					toRemove.add(i);
 				}
 			}
 		}
 
 		current.removeAll(toRemove);
+	}
+
+	@Override
+	public boolean validate(SudokuState state) {
+		for (Area area : areas) {
+			int sum = 0;
+
+			for (Pair<Integer, Integer> pos : area.getPoints()) {
+				sum += state.get(pos);
+			}
+
+			if (sum != AREA_TARGET) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

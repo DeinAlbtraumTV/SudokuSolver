@@ -26,4 +26,10 @@ public class UniqueAreaRule extends AreaRule {
 
 		current.removeAll(toRemove);
 	}
+
+	@Override
+	public boolean validate(SudokuState state) {
+		// We don't need any special validation for this rule
+		return true;
+	}
 }

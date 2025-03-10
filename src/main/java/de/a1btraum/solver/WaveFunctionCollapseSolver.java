@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import de.a1btraum.core.SudokuState;
 import de.a1btraum.solver.rules.IRule;
+import de.a1btraum.solver.rules.IValidatableRule;
 import de.a1btraum.util.Pair;
 
 import java.util.ArrayList;
@@ -102,6 +103,20 @@ public class WaveFunctionCollapseSolver {
 		return getAllowedValues(pos.getVal1(), pos.getVal2());
 	}
 
+	/**
+	 * Validate all rules that need to be validated
+	 * @return If all rules are valid
+	 */
+	private boolean validateRules() {
+		for (IRule rule : rules) {
+			if (rule instanceof IValidatableRule areaRule) {
+				if (!areaRule.validate(getCurrentState())) return false;
+			}
+		}
+
+		return true;
+	}
+
 	private Pair<Pair<Integer, Integer>, List<Integer>> getMostStableField() {
 		int lowestEntropy = Integer.MAX_VALUE;
 		Pair<Integer, Integer> lowestEntropyPosition = null;
@@ -169,7 +184,7 @@ public class WaveFunctionCollapseSolver {
 			step.setChangeValue(values.get(0));
 		}
 
-		if (state.isSolved()) {
+		if (state.isSolved() && validateRules()) {
 			solved = true;
 			return true;
 		}
