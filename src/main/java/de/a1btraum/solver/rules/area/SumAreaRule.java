@@ -7,10 +7,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class MaxAreaRule extends AreaRule {
+public class SumAreaRule extends AreaRule {
 	private final int AREA_TARGET;
 
-	public MaxAreaRule(int areaTarget, String memberName) {
+	public SumAreaRule(int areaTarget, String memberName) {
 		super(memberName);
 		AREA_TARGET = areaTarget;
 	}
