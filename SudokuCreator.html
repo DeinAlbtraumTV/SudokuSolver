@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sudoku Creator</title>
+    <style>
+        body {
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            display: flex;
+        }
+
+        .spacer {
+            flex-grow: 1;
+        }
+
+        #grid {
+            display: grid;
+            overflow: auto;
+            height: fit-content;
+        }
+
+        .entry {
+            text-align: center;
+            align-content: center;
+        }
+
+        #controls {
+            min-width: 400px;
+            width: 30%;
+        }
+    </style>
+</head>
+<body>
+<noscript>This page requires javascript to function! Honestly, congrats if you managed to be seeing this message ._.</noscript>
+<div class="container">
+    <!-- Setting grid row + column count inline so we can modify with js -->
+    <div id="grid" style="grid-template-rows: repeat(1, 40px); grid-template-columns: repeat(1, 40px); border: 2px solid black;">
+
+    </div>
+    <div class="spacer"></div>
+    <div id="controls">
+        <h1>CONTROLS</h1>
+        <hr/>
+        <button onclick="importFromClipboard()">Import from Clipboard (JSON)</button><br><br>
+        <button onclick="exportToClipboard()">Export to Clipboard (JSON)</button><br><br>
+        <label for="box-width">Box Width:</label>
+        <input id="box-width" placeholder="3" value="3" onchange="boxWidthChanged()"/><br><br>
+        <label for="box-height">Box Height:</label>
+        <input id="box-height" placeholder="3" value="3" onchange="boxHeightChanged()"/>
+        <hr/>
+        <h2>RULES</h2>
+        <label for="rule-name">Rule-Name:</label>
+        <input id="rule-name" placeholder="Rule1"/>
+        <button onclick="addRule()">Add Rule</button>
+        <button onclick="stopEditing()">Stop Editing</button><br>
+        <ol id="rule-list"></ol>
+        <hr/>
+        <h2>INFO</h2>
+        Usage when editing:<br>
+        Leftclick (available on green and yellow tiles) -> Prepend to path/area<br>
+        Rightclick (available on yellow and red tiles) -> Append to path<br>
+        <br>
+        Setting a field to anything below 0 effectively turns it off for my solver, meaning you can have fields that aren't rectangular<br>
+        <br>
+        Max Number is determined by multiplying the box size (even for Freeform!) for my solver, so make sure to set it correctly (just do something like 1x8 or 3x3 for Freeform)<br>
+        <br>
+        Valid rules (for the solver in this repo, might be different for your implementation)<br>
+        <h4>Area rules:</h4>
+        Key: "V", Numbers in this area need to sum up to 5<br>
+        Key: "X", Numbers in this area need to sum up to 10<br>
+        Key: "Freeform", Special rule, having this in place disables Block and Line rules, Numbers in this area need to be unique<br><br>
+        <h4>Path rules:</h4>
+        Key: "Thermo", Adjacent Numbers in this path need to be in ascending order<br>
+        Key: "Whisper", Adjacent Numbers in this path need to have a minimum difference of 5<br><br>
+        <h4>Basic rules:</h4>
+        Block rule, Numbers in a simple block need to be unique (disabled when "Freeform" is present)<br>
+        Line rule, Numbers in a row and column need to be unique (disabled when "Freeform" is present)<br>
+        <br>
+        Rule types can't be saved in the JSON, so rules give both edit options for paths and areas, just use whatever you need (data format is the same for both)
+        <hr/>
+        <h2>WARNING</h2>
+        <span>This does not really perform any kinds of sanity checking, use at your own risk</span><br><br>
+        <span>Only tested in Firefox, formatting errors/bugs are skill issues if they don't happen in Firefox</span>
+    </div>
+</div>
+
+<template id="grid-entry">
+    <div class="entry" style="border-right: 1px solid black; border-bottom: 1px solid black;" contenteditable onmousedown="fieldDataEditStarted(event)" onfocus="fieldDataFocused(event)" oninput="fieldDataChanged(event)" onblur="fieldDataEditFinished(event)" oncontextmenu="fieldDataContextMenu(event)">
+    </div>
+</template>
+
+<template id="add-col-button">
+    <div style="grid-area: 1/-1/-1/-1">
+        <button style="width: 40px; height: 100%;" onclick="addColumn()">
+            +
+        </button>
+    </div>
+</template>
+
+<template id="add-row-button">
+    <div style="grid-area: -1/1/-1/-1">
+        <button style="width: 100%; height: 40px;" onclick="addRow()">
+            +
+        </button>
+    </div>
+</template>
+
+<template id="add-both-button">
+    <div style="grid-area: -1/-1/-1/-1">
+        <button style="width: 40px; height: 40px;" onclick="addBoth()">
+            +
+        </button>
+    </div>
+</template>
+
+<template id="rule-entry">
+    <li>
+        <span class="rule-key"></span>
+        <ol class="rule-data"></ol>
+    </li>
+</template>
+
+<template id="rule-data-entry">
+    <li>
+        <button onclick="startEditingAsPath(event)">Edit as path</button>
+        <button onclick="startEditingAsArea(event)">Edit as area</button>
+    </li>
+</template>
+
+<script>
+    const gridEntryTemplate = document.getElementById("grid-entry")
+    const addColButtonTemplate = document.getElementById("add-col-button")
+    const addRowButtonTemplate = document.getElementById("add-row-button")
+    const addBothButtonTemplate = document.getElementById("add-both-button")
+    const ruleEntryTemplate = document.getElementById("rule-entry")
+    const ruleDataEntryTemplate = document.getElementById("rule-data-entry")
+
+    const grid = document.getElementById("grid")
+    const ruleList = document.getElementById("rule-list")
+
+    const boxWidthInput = document.getElementById("box-width")
+    const boxHeightInput = document.getElementById("box-height")
+    const ruleKeyInput = document.getElementById("rule-name")
+
+    let rows = 1
+    let columns = 1
+
+    let complexBoxBorders = false
+    let simpleBoxWidth = boxWidthInput.value ?? 3
+    let simpleBoxHeight = boxHeightInput.value ?? 3
+    let borderWidth = 3
+
+    let fields = [[0]]
+    let rules = {}
+
+    let currentlyEditing = {
+        key: 0,
+        rule: 0,
+        // 0 is path, 1 is area
+        mode: 0
+    }
+
+    let editingActive = false
+
+    function addButtons() {
+        grid.appendChild(addColButtonTemplate.content.cloneNode(true))
+        grid.appendChild(addRowButtonTemplate.content.cloneNode(true))
+        grid.appendChild(addBothButtonTemplate.content.cloneNode(true))
+    }
+
+    // Clears the grid and adds all children back <br>
+    // Also adds buttons
+    function populateGrid() {
+        // clear children
+        grid.replaceChildren()
+
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < columns; col++) {
+                let entryClone = gridEntryTemplate.content.cloneNode(true)
+                let entryElem = entryClone.childNodes[1]
+
+                let style = "border-right: 1px solid black; border-bottom: 1px solid black;"
+
+                if (!complexBoxBorders) {
+                    if (col * row > 0 && (col + 1) % simpleBoxWidth === 0 && (row + 1) % simpleBoxHeight === 0) {
+                        style = `border-right: ${borderWidth}px solid black; border-bottom: ${borderWidth}px solid black;`
+                    } else if (col > 0 && (col + 1) % simpleBoxWidth === 0) {
+                        style = `border-right: ${borderWidth}px solid black; border-bottom: 1px solid black;`
+                    } else if (row > 0 && (row + 1) % simpleBoxHeight === 0) {
+                        style = `border-right: 1px solid black; border-bottom: ${borderWidth}px solid black;`
+                    }
+                }
+
+                if (fields[row][col] < 0) {
+                    style += " background-color: #a9a9a9;"
+                } else {
+                    entryElem.childNodes[0].textContent = "" + fields[row][col]
+                }
+
+                // Edit specific styling (aka which fields are valid for paths/areas)
+                if (editingActive) {
+                    // Path
+                    if (currentlyEditing.mode === 0) {
+                        let entries = rules[currentlyEditing.key][currentlyEditing.rule].length
+                        if (entries === 0) {
+                            style += " background-color: green;"
+                            entryElem.setAttribute("data-prepend-available", true)
+                        } else {
+                            let firstPos = rules[currentlyEditing.key][currentlyEditing.rule][0]
+                            let lastPos = rules[currentlyEditing.key][currentlyEditing.rule][entries - 1]
+
+                            let nearFirstPos = false
+                            let nearLastPos = false
+
+                            if ((Math.abs(row - firstPos[0]) === 1 && Math.abs(col - firstPos[1]) <= 1) ||
+                                (Math.abs(col - firstPos[1]) === 1 && Math.abs(row - firstPos[0]) <= 1)) {
+                                style += " background-color: green;"
+                                nearFirstPos = true
+
+                                entryElem.setAttribute("data-prepend-available", true)
+                            }
+
+                            if ((Math.abs(row - lastPos[0]) === 1 && Math.abs(col - lastPos[1]) <= 1) ||
+                                (Math.abs(col - lastPos[1]) === 1 && Math.abs(row - lastPos[0]) <= 1)) {
+                                style += " background-color: red;"
+                                nearLastPos = true
+
+                                entryElem.setAttribute("data-append-available", true)
+                            }
+
+                            if (nearFirstPos && nearLastPos) {
+                                style += " background-color: yellow;"
+                            }
+
+                            if (!nearFirstPos && !nearLastPos) {
+                                entryElem.setAttribute("data-prepend-available", false)
+                                entryElem.setAttribute("data-append-available", false)
+                            }
+
+                            for (let index in rules[currentlyEditing.key][currentlyEditing.rule]) {
+                                let pos = rules[currentlyEditing.key][currentlyEditing.rule][index]
+                                if (pos[0] === row && pos[1] === col) {
+                                    style += " background-color: blue;"
+
+                                    entryElem.setAttribute("data-prepend-available", false)
+                                    entryElem.setAttribute("data-append-available", false)
+                                }
+                            }
+                        }
+                    // Area
+                    } else {
+                        if (rules[currentlyEditing.key][currentlyEditing.rule].length === 0) {
+                            style += " background-color: green;"
+                            entryElem.setAttribute("data-prepend-available", true)
+                        } else {
+                            let nearArea = false
+
+                            for (let i in rules[currentlyEditing.key][currentlyEditing.rule]) {
+                                let pos = rules[currentlyEditing.key][currentlyEditing.rule][i]
+
+                                if (pos[0] === row && pos[1] === col) {
+                                    style += " background-color: blue;"
+
+                                    nearArea = false
+
+                                    break
+                                }
+
+                                if ((Math.abs(row - pos[0]) === 1 && Math.abs(col - pos[1]) <= 1) ||
+                                    (Math.abs(col - pos[1]) === 1 && Math.abs(row - pos[0]) <= 1)) {
+                                    style += " background-color: green;"
+
+                                    nearArea = true
+
+                                    entryElem.setAttribute("data-prepend-available", true)
+                                }
+                            }
+
+                            if (!nearArea) {
+                                entryElem.setAttribute("data-prepend-available", false)
+                                entryElem.setAttribute("data-append-available", false)
+                            }
+                        }
+                    }
+                }
+
+                entryElem.style = style
+                entryElem.setAttribute("data-row", row)
+                entryElem.setAttribute("data-col", col)
+
+                grid.appendChild(entryClone)
+            }
+        }
+
+        grid.style = `grid-template-rows: repeat(${rows}, 40px); grid-template-columns: repeat(${columns}, 40px); border: ${borderWidth}px solid black;`
+
+        addButtons()
+    }
+
+    function boxWidthChanged() {
+        simpleBoxWidth = boxWidthInput.value ?? 3
+
+        populateGrid()
+    }
+
+    function boxHeightChanged() {
+        simpleBoxHeight = boxHeightInput.value ?? 3
+
+        populateGrid()
+    }
+
+    function addColumn() {
+        columns++
+        for (let row = 0; row < rows; row++) {
+            fields[row].push(0)
+        }
+        populateGrid()
+    }
+
+    function addRow() {
+        rows++
+        let row = []
+
+        for (let col = 0; col < columns; col++) {
+            row.push(0)
+        }
+
+        fields.push(row)
+        populateGrid()
+    }
+
+    function addBoth() {
+        rows++
+        columns++
+
+        let row = []
+
+        for (let col = 0; col < columns; col++) {
+            row.push(0)
+        }
+
+        fields.push(row)
+
+        for (let row = 0; row < rows; row++) {
+            fields[row].push(0)
+        }
+        populateGrid()
+    }
+
+    function addRule() {
+        let key = ruleKeyInput.value
+
+        if (!key) return;
+
+        if (key === "Freeform") complexBoxBorders = true
+
+        if (rules[key]) {
+            rules[key].push([])
+        } else {
+            rules[key] = [[]]
+        }
+
+        populateGrid()
+        populateRules()
+    }
+
+    function populateRules() {
+        // Empty the list
+        ruleList.replaceChildren()
+
+        for (let key in rules) {
+            let entry = ruleEntryTemplate.content.cloneNode(true).childNodes[1]
+            let keyField = entry.childNodes[1]
+            let list = entry.childNodes[3]
+
+            keyField.textContent = key
+            entry.setAttribute("data-key", key)
+
+            let index = 0;
+            for (let rule in rules[key]) {
+                let dataEntry = ruleDataEntryTemplate.content.cloneNode(true).childNodes[1]
+
+                dataEntry.setAttribute("data-key", key)
+                dataEntry.setAttribute("data-rule", index)
+
+                list.appendChild(dataEntry)
+
+                index++;
+            }
+
+            ruleList.appendChild(entry)
+        }
+    }
+
+    function startEditingAsPath(event) {
+        let t = event.target
+        let key = t.parentElement.getAttribute("data-key")
+        let rule = t.parentElement.getAttribute("data-rule")
+
+        currentlyEditing.key = key
+        currentlyEditing.rule = rule
+        currentlyEditing.mode = 0
+
+        editingActive = true
+
+        populateGrid()
+    }
+
+    function startEditingAsArea(event) {
+        let t = event.target
+        let key = t.parentElement.getAttribute("data-key")
+        let rule = t.parentElement.getAttribute("data-rule")
+
+        currentlyEditing.key = key
+        currentlyEditing.rule = rule
+        currentlyEditing.mode = 1
+
+        editingActive = true
+
+        populateGrid()
+    }
+
+    function stopEditing() {
+        editingActive = false
+
+        populateGrid()
+    }
+
+    function fieldDataEditStarted(event) {
+        if (event.buttons !== 1) return
+
+        let t = event.target
+        let row = t.getAttribute("data-row")
+        let col = t.getAttribute("data-col")
+
+        let prependAvailable = t.getAttribute("data-prepend-available")
+
+        if (editingActive && prependAvailable && prependAvailable === "true") {
+            rules[currentlyEditing.key][currentlyEditing.rule].unshift([parseInt(row), parseInt(col)])
+
+            event.preventDefault()
+            event.stopPropagation()
+
+            populateGrid()
+            return
+        }
+
+        t.textContent = fields[row][col]
+    }
+
+    function fieldDataFocused(event) {
+        let t = event.target
+        // select the entire content
+        let range = document.createRange()
+        range.selectNodeContents(t)
+        let sel = window.getSelection()
+        sel.removeAllRanges()
+        sel.addRange(range)
+    }
+
+    function fieldDataContextMenu(event) {
+        let t = event.target
+        let row = t.getAttribute("data-row")
+        let col = t.getAttribute("data-col")
+
+        let appendAvailable = t.getAttribute("data-append-available")
+
+        if (editingActive && appendAvailable && appendAvailable === "true") {
+            rules[currentlyEditing.key][currentlyEditing.rule].push([parseInt(row), parseInt(col)])
+
+            event.preventDefault()
+            event.stopPropagation()
+
+            populateGrid()
+            return
+        }
+
+        event.preventDefault()
+        event.stopPropagation()
+    }
+
+    function fieldDataChanged(event) {
+        if (!event.data) return
+
+        let t = event.target
+        let row = t.getAttribute("data-row")
+        let col = t.getAttribute("data-col")
+
+        fields[row][col] = parseInt(t.textContent)
+        t.setAttribute("data-changed", true)
+    }
+
+    function fieldDataEditFinished(event) {
+        window.getSelection().removeAllRanges()
+
+        // This is done so we can tab through, still breaks once we actually repopulate the grid but too lazy to fix
+        if (event.target.getAttribute("data-changed"))
+            populateGrid()
+    }
+
+    function exportToClipboard() {
+        let obj = {
+            "Dimension": [simpleBoxWidth, simpleBoxHeight],
+            "Sudoku": fields,
+            ...rules
+        }
+
+        let string = JSON.stringify(obj, null, '\t')
+        navigator.clipboard.writeText(string)
+        console.log(string)
+    }
+
+    async function importFromClipboard() {
+        let obj = JSON.parse(await navigator.clipboard.readText())
+
+        simpleBoxWidth = obj["Dimension"][0]
+        simpleBoxHeight = obj["Dimension"][1]
+
+        fields = obj["Sudoku"]
+        rows = fields.length
+        columns = fields[0].length
+
+        // get rid of all non-rule fields
+        delete obj["Dimension"]
+        delete obj["Sudoku"]
+
+        rules = obj
+
+        if (rules["Freeform"]) complexBoxBorders = true
+
+        populateGrid()
+        populateRules()
+    }
+
+    populateGrid()
+    populateRules()
+</script>
+</body>
+</html>
