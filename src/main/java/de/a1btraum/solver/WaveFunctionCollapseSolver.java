@@ -109,8 +109,8 @@ public class WaveFunctionCollapseSolver {
 	 */
 	private boolean validateRules() {
 		for (IRule rule : rules) {
-			if (rule instanceof IValidatableRule areaRule) {
-				if (!areaRule.validate(getCurrentState())) return false;
+			if (rule instanceof IValidatableRule validatableRule) {
+				if (!validatableRule.validate(getCurrentState())) return false;
 			}
 		}
 
