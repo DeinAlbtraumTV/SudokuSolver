@@ -35,7 +35,7 @@ public abstract class AbstractPath {
 
 		for (int i = 0; i < points.size(); i++) {
 			Pair<Integer, Integer> p = points.get(i);
-			if (p.getVal1() == row && p.getVal2() == col) {
+			if (p.val1() == row && p.val2() == col) {
 				if (i > 0) {
 					// Previous Path position
 					Pair<Integer, Integer> p2 = points.get(i - 1);

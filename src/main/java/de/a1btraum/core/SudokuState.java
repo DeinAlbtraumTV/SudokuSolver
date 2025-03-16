@@ -69,7 +69,7 @@ public class SudokuState {
 	}
 
 	public int get(Pair<Integer, Integer> pos) {
-		return get(pos.getVal1(), pos.getVal2());
+		return get(pos.val1(), pos.val2());
 	}
 
 	public int get(int row, int col) {
@@ -81,7 +81,7 @@ public class SudokuState {
 	}
 
 	public void set(Pair<Integer, Integer> pos, int value) {
-		set(pos.getVal1(), pos.getVal2(), value);
+		set(pos.val1(), pos.val2(), value);
 	}
 
 	/**

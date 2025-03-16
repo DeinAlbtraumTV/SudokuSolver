@@ -45,7 +45,7 @@ public class WaveFunctionCollapseSolver {
 	}
 
 	/**
-	 * Backtrack in case we don't have any valid values left (aka we hit a dead end)
+	 * Backtrack in case we don't have any valid values left (aka we hit a dead end) <br>
 	 * This reverts cells back into a superposition until we can make another move or run out of steps
 	 */
 	private void backtrack() {
@@ -100,7 +100,7 @@ public class WaveFunctionCollapseSolver {
 	 * @return All allowed values for a given position that were not yet tried in the current step
 	 */
 	private List<Integer> getAllowedValues(Pair<Integer, Integer> pos) {
-		return getAllowedValues(pos.getVal1(), pos.getVal2());
+		return getAllowedValues(pos.val1(), pos.val2());
 	}
 
 	/**
@@ -166,8 +166,8 @@ public class WaveFunctionCollapseSolver {
 
 		SudokuState state = getCurrentState();
 
-		Pair<Integer, Integer> pos = toCollapse.getVal1();
-		List<Integer> values = toCollapse.getVal2();
+		Pair<Integer, Integer> pos = toCollapse.val1();
+		List<Integer> values = toCollapse.val2();
 
 		if (steps.isEmpty() || !steps.peek().getChangePos().equals(pos)) {
 			state = state.snapshot();
